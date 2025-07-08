@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Nostalgia Car Game</title>
+<style>
+body { margin: 0; overflow: hidden; background: linear-gradient(#000428, #004e92); color: #fff; font-family: monospace; display: flex; justify-content: center; align-items: center; height: 100vh; }
+#disclaimer { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.95); color: #fff; display: flex; justify-content: center; align-items: center; flex-direction: column; z-index: 10; }
+#menu { text-align: center; display: none; }
+#gameCanvas { display: none; background: black; border: 4px solid white; }
+button { background: white; color: black; border: none; padding: 10px 20px; font-size: 18px; cursor: pointer; margin-top: 20px; transition: transform 0.2s; }
+button:hover { transform: scale(1.1); }
+.glow { animation: glowAnim 2s ease-in-out infinite alternate; }
+@keyframes glowAnim { from { text-shadow: 0 0 10px #0ff, 0 0 20px #0ff; } to { text-shadow: 0 0 20px #0ff, 0 0 40px #0ff; } }
+</style>
+</head>
+<body>
+<div id="disclaimer">
+    <h2>⚠️ Please Disable AdBlocker ⚠️</h2>
+    <p>This game may require ads to support its development. Please turn off your adblocker before playing.</p>
+    <button onclick="closeDisclaimer()">I Have Disabled AdBlocker</button>
+</div>
+<div id="menu">
+    <h1 class="glow">🚗 Nostalgia Car Game 🚗</h1>
+    <p>Controls: A/D or Arrow Keys to Move</p>
+    <p>Power-Ups: 🛡️ Shield | 🐢 Slow | 💰 Coin</p>
+    <button id="startButton" onclick="startGame()">Start Game</button>
+    <br><button id="musicToggle" onclick="toggleMusic()">🔊 Toggle Music</button>
+</div>
+<canvas id="gameCanvas" width="400" height="600"></canvas>
+<audio id="bgMusic" src="https://cdn.pixabay.com/download/audio/2023/03/25/audio_c8e6d15b23.mp3?filename=retro-arcade-140329.mp3" loop preload="auto"></audio>
+<script>
+let disclaimerShown = localStorage.getItem('disclaimerShown') === 'true';
+const music = document.getElementById('bgMusic');
+function toggleMusic() { music.volume = 0.3; music.play().catch(()=>{}); if (!music.paused) { music.pause(); } else { music.play().catch(()=>{}); } }
+function closeDisclaimer() { document.getElementById('disclaimer').style.display = 'none'; document.getElementById('menu').style.display = 'block'; localStorage.setItem('disclaimerShown','true'); music.volume = 0.3; music.play().catch(()=>{}); }
+if (disclaimerShown) { document.getElementById('disclaimer').style.display = 'none'; document.getElementById('menu').style.display = 'block'; music.volume = 0.3; music.play().catch(()=>{}); }
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+const menu = document.getElementById('menu');
+const startButton = document.getElementById('startButton');
+const carWidth = 30, carHeight = 50;
+let carX = 185, carY = 530, speed = 3, enemies = [], powerUps = [], score = 0;
+let highScore = localStorage.getItem('highScore') || 0;
+let gameOver = false, shield = false, slowMo = false;
+let enemyInterval, powerUpInterval;
+const moveSound = new Audio('https://cdn.pixabay.com/download/audio/2022/03/15/audio_93bc1691db.mp3?filename=beep-3-81198.mp3'); moveSound.volume = 0.1;
+const crashSound = new Audio('https://cdn.pixabay.com/download/audio/2023/04/02/audio_161bf137ca.mp3?filename=arcade-explosion-142095.mp3'); crashSound.volume = 0.3;
+function playMoveSound() { moveSound.currentTime = 0; moveSound.play().catch(()=>{}); }
+function playCrashSound() { crashSound.currentTime = 0; crashSound.play().catch(()=>{}); }
+function startGame() { menu.style.display = 'none'; canvas.style.display = 'block'; gameOver = false; score = 0; enemies = []; powerUps = []; speed = 3; shield = false; slowMo = false; clearInterval(enemyInterval); clearInterval(powerUpInterval); enemyInterval = setInterval(spawnEnemy, 1200); powerUpInterval = setInterval(spawnPowerUp, 6000); update(); }
+function drawRoad() { ctx.fillStyle = '#111'; ctx.fillRect(0, 0, 400, 600); ctx.strokeStyle = '#555'; ctx.lineWidth = 2; for (let i = 0; i < 600; i += 40) { ctx.beginPath(); ctx.moveTo(200, i); ctx.lineTo(200, i + 20); ctx.stroke(); } }
+function drawCar() { ctx.fillStyle = shield ? '#ff0' : '#fff'; ctx.fillRect(carX, carY, carWidth, carHeight); ctx.fillStyle = '#111'; ctx.fillRect(carX + 5, carY + 5, carWidth - 10, carHeight - 10); }
+function drawEnemy(e) { ctx.fillStyle = '#999'; ctx.fillRect(e.x, e.y, 30, 50); ctx.fillStyle = '#111'; ctx.fillRect(e.x + 5, e.y + 5, 20, 40); }
+function drawPowerUp(p) { ctx.fillStyle = p.type === 'shield' ? '#ff0' : p.type === 'slow' ? '#0ff' : '#fff'; ctx.beginPath(); ctx.arc(p.x + 15, p.y + 15, 15, 0, 2 * Math.PI); ctx.fill(); ctx.fillStyle = '#000'; ctx.font = '20px serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(p.type === 'shield' ? '🛡️' : p.type === 'slow' ? '🐢' : '💰', p.x + 15, p.y + 15); }
+function spawnEnemy() { enemies.push({ x: Math.random() * 340 + 10, y: -50 }); if (Math.random() < 0.05) { enemies.push({ x: Math.random() * 340 + 10, y: -100 }); } }
+function spawnPowerUp() { let t = ['shield', 'slow', 'coin'][Math.floor(Math.random() * 3)]; powerUps.push({ x: Math.random() * 340 + 10, y: -30, type: t }); if (Math.random() < 0.1) { powerUps.push({ x: Math.random() * 340 + 10, y: -60, type: t }); } }
+function drawScore() { ctx.fillStyle = '#fff'; ctx.font = '18px monospace'; ctx.textAlign = 'left'; ctx.textBaseline = 'top'; ctx.fillText('Score:' + score, 10, 10); ctx.fillText('High:' + highScore, 10, 30); }
+document.addEventListener('keydown', e => { if (['a', 'A', 'ArrowLeft'].includes(e.key) && carX > 10) { carX -= 30; playMoveSound(); } else if (['d', 'D', 'ArrowRight'].includes(e.key) && carX < 360) { carX += 30; playMoveSound(); } });
+function update() { if (gameOver) return; drawRoad(); drawCar(); enemies.forEach(enemy => { enemy.y += slowMo ? speed / 2 : speed; drawEnemy(enemy); if (enemy.y + 50 > carY && enemy.y < carY + 50 && enemy.x < carX + 30 && enemy.x + 30 > carX) { if (shield) { shield = false; enemies = enemies.filter(e => e !== enemy); } else { playCrashSound(); gameOver = true; if (score > highScore) { highScore = score; localStorage.setItem('highScore', highScore); } setTimeout(() => { canvas.style.display = 'none'; menu.style.display = 'block'; startButton.textContent = 'Restart Game'; }, 500); } } }); enemies = enemies.filter(e => e.y < 600); powerUps.forEach(p => { p.y += speed; drawPowerUp(p); if (p.y + 30 > carY && p.y < carY + 50 && p.x < carX + 30 && p.x + 30 > carX) { if (p.type === 'shield') { shield = true; } else if (p.type === 'slow') { slowMo = true; setTimeout(() => slowMo = false, 5000); } else if (p.type === 'coin') { score += 50; } powerUps = powerUps.filter(pp => pp !== p); } }); powerUps = powerUps.filter(p => p.y < 600); score++; if (score % 900 === 0 && speed < 9) { speed += 0.2; } drawScore(); requestAnimationFrame(update); }
+</script>
+</body>
+</html>
