@@ -6,8 +6,9 @@
 body { margin: 0; overflow: hidden; background: linear-gradient(#000428, #004e92); color: #fff; font-family: monospace; display: flex; justify-content: center; align-items: center; height: 100vh; text-align: center; }
 #gameContainer { position: relative; width: 400px; height: 600px; display: flex; justify-content: center; align-items: center; }
 #disclaimer { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.95); color: #fff; display: flex; justify-content: center; align-items: center; flex-direction: column; padding: 20px; z-index: 20; font-size: 18px; border: 2px solid #0ff; border-radius: 10px; }
-#disclaimer h2 { margin-bottom: 10px; color: #0ff; }
-#menu { position: absolute; top: 0; left: 0; right: 0; bottom: 0; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 10; background: rgba(0,0,0,0.8); }
+#menu, #gameOverScreen { position: absolute; top: 0; left: 0; right: 0; bottom: 0; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 10; background: rgba(0,0,0,0.8); }
+#menu { display: none; }
+#gameOverScreen { display: none; }
 #gameCanvas { display: none; background: black; border: 4px solid white; }
 button { background: #0ff; color: black; border: none; padding: 10px 20px; font-size: 18px; cursor: pointer; margin-top: 10px; transition: transform 0.2s, background 0.3s; border-radius: 6px; }
 button:hover { transform: scale(1.05); background: #0cc; }
@@ -32,6 +33,12 @@ button:hover { transform: scale(1.05); background: #0cc; }
         <button id="startButton" onclick="startGame()">Start Game</button>
         <button id="musicToggle" onclick="toggleMusic()">🔊 Toggle Music</button>
     </div>
+    <div id="gameOverScreen">
+        <h1>Game Over</h1>
+        <p id="finalScore"></p>
+        <p id="finalHighScore"></p>
+        <button onclick="restartGame()">Restart Game</button>
+    </div>
     <canvas id="gameCanvas" width="400" height="600"></canvas>
     <div id="leftBtn" class="btn">◀️</div>
     <div id="rightBtn" class="btn">▶️</div>
@@ -40,6 +47,9 @@ button:hover { transform: scale(1.05); background: #0cc; }
 <script>
 const disclaimer = document.getElementById('disclaimer');
 const menu = document.getElementById('menu');
+const gameOverScreen = document.getElementById('gameOverScreen');
+const finalScore = document.getElementById('finalScore');
+const finalHighScore = document.getElementById('finalHighScore');
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 const music = document.getElementById('bgMusic');
@@ -53,7 +63,8 @@ let movingLeft = false, movingRight = false;
 function closeDisclaimer() { disclaimer.style.display = 'none'; menu.style.display = 'flex'; localStorage.setItem('disclaimerShown', 'true'); music.volume = 0.3; music.play().catch(()=>{}); }
 window.onload = function() { if (!localStorage.getItem('disclaimerShown')) { disclaimer.style.display = 'flex'; menu.style.display = 'none'; } else { disclaimer.style.display = 'none'; menu.style.display = 'flex'; music.volume = 0.3; music.play().catch(()=>{}); } }
 function toggleMusic() { music.volume = 0.3; if (!music.paused) { music.pause(); } else { music.play().catch(()=>{}); } }
-function startGame() { menu.style.display = 'none'; canvas.style.display = 'block'; initializeGame(); }
+function startGame() { menu.style.display = 'none'; gameOverScreen.style.display = 'none'; canvas.style.display = 'block'; initializeGame(); }
+function restartGame() { startGame(); }
 function initializeGame() { enemies = []; powerUps = []; score = 0; speed = 3; shield = false; slowMo = false; gameOver = false; clearInterval(enemyInterval); clearInterval(powerUpInterval); enemyInterval = setInterval(spawnEnemy, 900); powerUpInterval = setInterval(spawnPowerUp, 6000); update(); }
 function spawnEnemy() { for (let i = 0; i < Math.floor(Math.random() * 2) + 1; i++) { enemies.push({ x: Math.random() * 340 + 10, y: -Math.random() * 200 - 50 }); } }
 function spawnPowerUp() { let t = ['shield', 'slow', 'coin'][Math.floor(Math.random() * 3)]; powerUps.push({ x: Math.random() * 340 + 10, y: -30, type: t }); }
@@ -63,7 +74,7 @@ function drawEnemy(e) { ctx.fillStyle = '#999'; ctx.fillRect(e.x,e.y,30,50); ctx
 function drawPowerUp(p) { ctx.fillStyle = p.type==='shield'?'#ff0':p.type==='slow'?'#0ff':'#fff'; ctx.beginPath(); ctx.arc(p.x+15,p.y+15,15,0,2*Math.PI); ctx.fill(); ctx.fillStyle = '#000'; ctx.font = '20px serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(p.type==='shield'?'🛡️':p.type==='slow'?'🐢':'💰',p.x+15,p.y+15); }
 function drawScore() { ctx.fillStyle = '#fff'; ctx.font = '18px monospace'; ctx.textAlign = 'left'; ctx.textBaseline = 'top'; ctx.fillText('Score:'+score,10,10); ctx.fillText('High:'+highScore,10,30); }
 document.addEventListener('keydown', e => { if(['a','A','ArrowLeft'].includes(e.key)&&carX>10){carX-=30;} else if(['d','D','ArrowRight'].includes(e.key)&&carX<360){carX+=30;} });
-function update() { if(gameOver) return; drawRoad(); drawCar(); enemies.forEach(enemy=>{ enemy.y+=slowMo?speed/2:speed; drawEnemy(enemy); if(enemy.y+50>carY&&enemy.y<carY+50&&enemy.x<carX+30&&enemy.x+30>carX){ if(shield){shield=false; enemies=enemies.filter(e=>e!==enemy);} else {gameOver=true; if(score>highScore){highScore=score;localStorage.setItem('highScore',highScore);} setTimeout(()=>{canvas.style.display='none';menu.style.display='flex';},500);} } }); enemies=enemies.filter(e=>e.y<600); powerUps.forEach(p=>{ p.y+=speed; drawPowerUp(p); if(p.y+30>carY&&p.y<carY+50&&p.x<carX+30&&p.x+30>carX){ if(p.type==='shield'){shield=true;} else if(p.type==='slow'){slowMo=true; setTimeout(()=>slowMo=false,5000);} else if(p.type==='coin'){score+=50;} powerUps=powerUps.filter(pp=>pp!==p); } }); powerUps=powerUps.filter(p=>p.y<600); score++; if(score%900===0&&speed<9){speed+=0.2;} drawScore(); requestAnimationFrame(update); }
+function update() { if(gameOver) return; drawRoad(); drawCar(); enemies.forEach(enemy=>{ enemy.y+=slowMo?speed/2:speed; drawEnemy(enemy); if(enemy.y+50>carY&&enemy.y<carY+50&&enemy.x<carX+30&&enemy.x+30>carX){ if(shield){shield=false; enemies=enemies.filter(e=>e!==enemy);} else {gameOver=true; if(score>highScore){highScore=score;localStorage.setItem('highScore',highScore);} finalScore.textContent = 'Score: ' + score; finalHighScore.textContent = 'High Score: ' + highScore; canvas.style.display = 'none'; gameOverScreen.style.display = 'flex'; return; } } }); enemies=enemies.filter(e=>e.y<600); powerUps.forEach(p=>{ p.y+=speed; drawPowerUp(p); if(p.y+30>carY&&p.y<carY+50&&p.x<carX+30&&p.x+30>carX){ if(p.type==='shield'){shield=true;} else if(p.type==='slow'){slowMo=true; setTimeout(()=>slowMo=false,5000);} else if(p.type==='coin'){score+=50;} powerUps=powerUps.filter(pp=>pp!==p); } }); powerUps=powerUps.filter(p=>p.y<600); score++; if(score%900===0&&speed<9){speed+=0.2;} drawScore(); requestAnimationFrame(update); }
 leftBtn.addEventListener('touchstart',()=>movingLeft=true);
 leftBtn.addEventListener('touchend',()=>movingLeft=false);
 rightBtn.addEventListener('touchstart',()=>movingRight=true);
