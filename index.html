@@ -58,34 +58,5 @@ function drawScore() { ctx.fillStyle = '#fff'; ctx.font = '18px monospace'; ctx.
 document.addEventListener('keydown', e => { if (['a', 'A', 'ArrowLeft'].includes(e.key) && carX > 10) { carX -= 30; playMoveSound(); } else if (['d', 'D', 'ArrowRight'].includes(e.key) && carX < 360) { carX += 30; playMoveSound(); } });
 function update() { if (gameOver) return; drawRoad(); drawCar(); enemies.forEach(enemy => { enemy.y += slowMo ? speed / 2 : speed; drawEnemy(enemy); if (enemy.y + 50 > carY && enemy.y < carY + 50 && enemy.x < carX + 30 && enemy.x + 30 > carX) { if (shield) { shield = false; enemies = enemies.filter(e => e !== enemy); } else { playCrashSound(); gameOver = true; if (score > highScore) { highScore = score; localStorage.setItem('highScore', highScore); } setTimeout(() => { canvas.style.display = 'none'; menu.style.display = 'block'; startButton.textContent = 'Restart Game'; }, 500); } } }); enemies = enemies.filter(e => e.y < 600); powerUps.forEach(p => { p.y += speed; drawPowerUp(p); if (p.y + 30 > carY && p.y < carY + 50 && p.x < carX + 30 && p.x + 30 > carX) { if (p.type === 'shield') { shield = true; } else if (p.type === 'slow') { slowMo = true; setTimeout(() => slowMo = false, 5000); } else if (p.type === 'coin') { score += 50; } powerUps = powerUps.filter(pp => pp !== p); } }); powerUps = powerUps.filter(p => p.y < 600); score++; if (score % 900 === 0 && speed < 9) { speed += 0.2; } drawScore(); requestAnimationFrame(update); }
 </script>
-    <div id="leftBtn" class="btn">◀️</div>
-<div id="rightBtn" class="btn">▶️</div>
-
-<script>
-let movingLeft = false, movingRight = false;
-const leftBtn = document.getElementById('leftBtn');
-const rightBtn = document.getElementById('rightBtn');
-
-leftBtn.addEventListener('touchstart', () => movingLeft = true);
-leftBtn.addEventListener('touchend', () => movingLeft = false);
-rightBtn.addEventListener('touchstart', () => movingRight = true);
-rightBtn.addEventListener('touchend', () => movingRight = false);
-
-if (/Mobi|Android|iPhone|iPad/i.test(navigator.userAgent)) {
-    leftBtn.style.display = 'block';
-    rightBtn.style.display = 'block';
-}
-
-function mobileControlLoop() {
-    if (movingLeft && typeof carX !== 'undefined' && carX > 10) {
-        carX -= 5;
-    }
-    if (movingRight && typeof carX !== 'undefined' && carX < 360) {
-        carX += 5;
-    }
-    requestAnimationFrame(mobileControlLoop);
-}
-mobileControlLoop();
-</script>
 </body>
 </html>
